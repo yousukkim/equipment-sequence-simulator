@@ -1,0 +1,13 @@
+# 빌드 산출물
+build/
+out/
+*.user
+
+# 편집기
+.vs/
+.vscode/
+.idea/
+
+# 작업용 로컬 문서 — 공개 저장소에 올리지 않는다
+CLAUDE.md
+PLAN.md
