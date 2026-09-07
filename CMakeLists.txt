@@ -20,10 +20,13 @@ target_include_directories(ess_third_party INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
 add_library(ess_core STATIC
     src/model/types.cpp
     src/model/violation.cpp
+    src/model/dependency_graph.cpp
     src/io/scenario_loader.cpp
+    src/io/scenario_writer.cpp
     src/validate/schedule_view.cpp
     src/validate/rules.cpp
     src/validate/validator.cpp
+    src/schedule/scheduler.cpp
 )
 target_include_directories(ess_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(ess_core PUBLIC ess_third_party)
@@ -37,6 +40,7 @@ add_executable(ess_tests
     tests/test_main.cpp
     tests/test_loader.cpp
     tests/test_validator.cpp
+    tests/test_scheduler.cpp
 )
 target_link_libraries(ess_tests PRIVATE ess_core)
 

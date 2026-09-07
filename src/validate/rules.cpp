@@ -3,11 +3,11 @@
 #include <algorithm>
 #include <cmath>
 #include <format>
-#include <limits>
 #include <set>
 #include <string>
-#include <unordered_map>
 #include <utility>
+
+#include "model/dependency_graph.hpp"
 
 namespace ess {
 namespace {
@@ -26,61 +26,6 @@ std::string arrow_join(const std::vector<std::string>& nodes) {
     }
     return out;
 }
-
-// 의존 그래프에서 순환을 찾아낸다.
-// 간선 방향은 "선행 → 후행"으로, 메시지가 실행 순서대로 읽히게 했다.
-class CycleFinder {
-public:
-    explicit CycleFinder(std::unordered_map<std::string, std::vector<std::string>> adjacency)
-        : adjacency_(std::move(adjacency)) {}
-
-    // 시작점 순서를 호출자가 정해 주면 결과 순서도 결정론적이 된다.
-    void visit_all(const std::vector<std::string>& order) {
-        for (const std::string& node : order) {
-            if (color_[node] == kWhite) visit(node);
-        }
-    }
-
-    // 중복 없는 순환 목록. 각 순환은 가장 작은 id에서 시작하도록 회전되어 있다.
-    const std::set<std::vector<std::string>>& cycles() const { return cycles_; }
-
-private:
-    static constexpr int kWhite = 0;  // 미방문
-    static constexpr int kGray = 1;   // 현재 경로 위
-    static constexpr int kBlack = 2;  // 탐색 완료
-
-    std::unordered_map<std::string, std::vector<std::string>> adjacency_;
-    std::unordered_map<std::string, int> color_;
-    std::vector<std::string> path_;
-    std::set<std::vector<std::string>> cycles_;
-
-    void visit(const std::string& node) {
-        color_[node] = kGray;
-        path_.push_back(node);
-        if (const auto it = adjacency_.find(node); it != adjacency_.end()) {
-            for (const std::string& next : it->second) {
-                const int color = color_[next];
-                if (color == kWhite) {
-                    visit(next);
-                } else if (color == kGray) {
-                    record_cycle(next);
-                }
-            }
-        }
-        path_.pop_back();
-        color_[node] = kBlack;
-    }
-
-    void record_cycle(const std::string& entry) {
-        const auto it = std::find(path_.begin(), path_.end(), entry);
-        if (it == path_.end()) return;
-        std::vector<std::string> cycle(it, path_.end());
-        // 같은 순환을 어디서 발견하든 같은 표현이 되도록 최소 id로 회전시킨다.
-        const auto smallest = std::min_element(cycle.begin(), cycle.end());
-        std::rotate(cycle.begin(), smallest, cycle.end());
-        cycles_.insert(std::move(cycle));
-    }
-};
 
 }  // namespace
 
@@ -126,23 +71,8 @@ void PrecedenceRule::check(const ScheduleView& view, std::vector<Violation>& out
 void CycleRule::check(const ScheduleView& view, std::vector<Violation>& out) const {
     const Scenario& scenario = view.scenario();
 
-    std::unordered_map<std::string, std::vector<std::string>> adjacency;
-    std::vector<std::string> order;
-    order.reserve(scenario.steps.size());
-    for (const Step& step : scenario.steps) {
-        order.push_back(step.id);
-        adjacency.try_emplace(step.id);
-    }
-    for (const Step& step : scenario.steps) {
-        for (const std::string& dep : step.depends_on) {
-            adjacency[dep].push_back(step.id);  // 선행 → 후행
-        }
-    }
-
-    CycleFinder finder{std::move(adjacency)};
-    finder.visit_all(order);
-
-    for (const std::vector<std::string>& cycle : finder.cycles()) {
+    // 순환 검출은 스케줄러(위상 정렬)와 같은 구현을 쓴다. model/dependency_graph 참고.
+    for (const std::vector<std::string>& cycle : find_dependency_cycles(scenario)) {
         std::vector<std::string> shown = cycle;
         shown.push_back(cycle.front());  // 닫힌 고리로 보이게 시작점을 한 번 더 붙인다
         const Step* head = nullptr;

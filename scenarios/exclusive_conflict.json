@@ -1,0 +1,78 @@
+{
+  "name": "배타 충돌 자동 회피 (모든 수치는 가상 값)",
+  "resources": [
+    {
+      "id": "rot_main",
+      "name": "주 회전축",
+      "type": "Rotary",
+      "constraints": {
+        "rate_min": 1.0,
+        "rate_max": 12.0,
+        "settle_time_ms": 200,
+        "max_continuous_ms": 2500,
+        "cooldown_ms": 800
+      }
+    },
+    {
+      "id": "emit_a",
+      "name": "방출부",
+      "type": "Emitter",
+      "constraints": {
+        "rate_min": 0.5,
+        "rate_max": 5.0,
+        "settle_time_ms": 300,
+        "exclusive_with": ["rot_main"]
+      }
+    },
+    {
+      "id": "sens_a",
+      "name": "수집부",
+      "type": "Sensor",
+      "constraints": {
+        "settle_time_ms": 50
+      }
+    }
+  ],
+  "steps": [
+    {
+      "id": "spin_1",
+      "resource_id": "rot_main",
+      "duration_ms": 1200,
+      "rate": 6.0
+    },
+    {
+      "id": "emit_1",
+      "resource_id": "emit_a",
+      "duration_ms": 900,
+      "rate": 2.0,
+      "depends_on": ["spin_1"]
+    },
+    {
+      "id": "read_1",
+      "resource_id": "sens_a",
+      "duration_ms": 900,
+      "rate": 0.0,
+      "depends_on": ["spin_1"]
+    },
+    {
+      "id": "spin_2",
+      "resource_id": "rot_main",
+      "duration_ms": 1200,
+      "rate": 6.0
+    },
+    {
+      "id": "emit_2",
+      "resource_id": "emit_a",
+      "duration_ms": 900,
+      "rate": 2.0,
+      "depends_on": ["spin_2"]
+    },
+    {
+      "id": "read_2",
+      "resource_id": "sens_a",
+      "duration_ms": 900,
+      "rate": 0.0,
+      "depends_on": ["spin_2"]
+    }
+  ]
+}
