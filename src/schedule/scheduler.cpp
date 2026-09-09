@@ -57,12 +57,22 @@ ScheduleResult schedule(const Scenario& scenario) {
         resources.emplace(resource.id, &resource);
     }
 
-    // 0. 시각을 옮겨서는 고칠 수 없는 제약을 먼저 본다.
-    //    이런 입력은 배치를 시도해 봐야 의미가 없고, 원인도 배치 결과보다 이 시점이 더 명확하다.
+    // 0-a. 사전 조건 검사.
+    //      참조 무결성은 로더의 책임이지만(DECISIONS D4), 로더를 거치지 않고 직접 부르는 경우가
+    //      있다. 조용히 건너뛰면 시각이 비어 있는 동작을 남긴 채 성공을 반환하게 되므로 막는다.
     for (const Step& step : scenario.steps) {
-        const auto it = resources.find(step.resource_id);
-        if (it == resources.end()) continue;  // 로더가 걸러 준다
-        const Constraints& c = it->second->constraints;
+        if (!resources.contains(step.resource_id)) {
+            result.input_errors.push_back(std::format(
+                "동작 '{}'이(가) 알 수 없는 자원 '{}'을(를) 가리킵니다.", step.id,
+                step.resource_id));
+        }
+    }
+    if (!result.input_errors.empty()) return result;
+
+    // 0-b. 시각을 옮겨서는 고칠 수 없는 제약을 본다.
+    //      이런 입력은 배치를 시도해 봐야 의미가 없고, 원인도 배치 결과보다 이 시점이 더 명확하다.
+    for (const Step& step : scenario.steps) {
+        const Constraints& c = resources.at(step.resource_id)->constraints;
 
         if (step.rate < c.rate_min || step.rate > c.rate_max) {
             result.failures.push_back(Violation{
@@ -115,9 +125,8 @@ ScheduleResult schedule(const Scenario& scenario) {
 
     for (const std::size_t index : *order) {
         Step& step = result.scenario.steps[index];
-        const auto resource_it = resources.find(step.resource_id);
-        if (resource_it == resources.end()) continue;
-        const Constraints& c = resource_it->second->constraints;
+        // 0-a에서 모든 동작의 자원이 존재함을 확인했으므로 여기서는 조회가 반드시 성공한다.
+        const Constraints& c = resources.at(step.resource_id)->constraints;
         ResourceState& state = states[step.resource_id];
         const Ms duration = step.duration_ms;
 

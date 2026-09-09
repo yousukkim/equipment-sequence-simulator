@@ -8,10 +8,16 @@
 namespace ess {
 
 struct ScheduleResult {
-    Scenario scenario;                // 성공하면 모든 동작에 start_ms가 채워져 있다
-    std::vector<Violation> failures;  // 비어 있으면 성공
+    Scenario scenario;  // 성공하면 모든 동작에 start_ms가 채워져 있다
 
-    bool ok() const { return failures.empty(); }
+    // 제약 때문에 배치할 수 없는 경우. 입력은 올바르지만 만족시킬 방법이 없다.
+    std::vector<Violation> failures;
+
+    // 사전 조건 위반. 로더를 거치지 않은 입력이 참조 무결성을 어긴 경우다.
+    // 제약 문제와 성격이 달라 따로 둔다. CLI는 이쪽을 입력 오류로 보고한다.
+    std::vector<std::string> input_errors;
+
+    bool ok() const { return failures.empty() && input_errors.empty(); }
 };
 
 // 입력의 start_ms를 무시하고 제약을 만족하는 시각을 새로 배치한다.

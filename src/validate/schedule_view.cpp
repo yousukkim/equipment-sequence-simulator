@@ -30,11 +30,11 @@ ScheduleView::ScheduleView(const Scenario& scenario) : scenario_(&scenario) {
     }
 
     // PlacedStep의 <=>가 (구간, id) 순서를 정의하므로 동률에서도 결과가 흔들리지 않는다.
-    std::sort(placed_.begin(), placed_.end());
+    std::ranges::sort(placed_);
 
-    // 정렬이 끝난 뒤에만 원소 주소를 잡는다.
-    for (const PlacedStep& p : placed_) {
-        placement_index_.emplace(p.step->id, &p);
+    for (std::size_t i = 0; i < placed_.size(); ++i) {
+        const PlacedStep& p = placed_[i];
+        placement_index_.emplace(p.step->id, i);
         if (const auto it = by_resource_.find(p.step->resource_id); it != by_resource_.end()) {
             it->second.push_back(p);
         }
@@ -58,7 +58,7 @@ const Resource& ScheduleView::resource(const std::string& resource_id) const {
 
 const PlacedStep* ScheduleView::placement_of(const std::string& step_id) const {
     const auto it = placement_index_.find(step_id);
-    return it == placement_index_.end() ? nullptr : it->second;
+    return it == placement_index_.end() ? nullptr : &placed_[it->second];
 }
 
 }  // namespace ess

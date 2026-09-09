@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <span>
 #include <string>
 #include <unordered_map>
@@ -36,7 +37,10 @@ private:
     std::vector<PlacedStep> placed_;
     std::unordered_map<std::string, std::vector<PlacedStep>> by_resource_;
     std::unordered_map<std::string, const Resource*> resource_index_;
-    std::unordered_map<std::string, const PlacedStep*> placement_index_;
+
+    // placed_ 안의 위치를 인덱스로 들고 있다.
+    // 포인터로 두면 뷰를 복사했을 때 사본의 인덱스가 원본 벡터를 가리켜 매달린 포인터가 된다.
+    std::unordered_map<std::string, std::size_t> placement_index_;
 };
 
 }  // namespace ess

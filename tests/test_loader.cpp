@@ -129,6 +129,30 @@ TEST_CASE("한 번에 여러 오류를 모아서 돌려준다") {
     CHECK(result.errors.size() >= 4);
 }
 
+TEST_CASE("한 필드에 오류를 겹쳐서 내지 않는다") {
+    // 음수 길이는 "음수는 쓸 수 없습니다" 하나로 끝나야 한다.
+    // 읽기에 실패한 값을 0으로 대체한 뒤 "0은 안 된다"를 또 내면 메시지가 서로 모순돼 보인다.
+    const ess::LoadResult result = ess::load_scenario_text(R"json({
+      "resources": [ { "id": "r" } ],
+      "steps": [ { "id": "s", "resource_id": "r", "duration_ms": -5, "rate": 0 } ]
+    })json");
+    REQUIRE_FALSE(result.ok());
+    const auto count = std::count_if(result.errors.begin(), result.errors.end(),
+                                     [](const ess::LoadError& e) {
+                                         return e.where == "/steps/0/duration_ms";
+                                     });
+    CHECK(count == 1);
+}
+
+TEST_CASE("길이가 0인 동작은 오류다") {
+    const ess::LoadResult result = ess::load_scenario_text(R"json({
+      "resources": [ { "id": "r" } ],
+      "steps": [ { "id": "s", "resource_id": "r", "duration_ms": 0, "rate": 0 } ]
+    })json");
+    REQUIRE_FALSE(result.ok());
+    CHECK(has_error_at(result.errors, "/steps/0/duration_ms"));
+}
+
 TEST_CASE("rate_min이 rate_max보다 크면 오류다") {
     const ess::LoadResult result = ess::load_scenario_text(R"json({
       "resources": [

@@ -9,7 +9,6 @@
 namespace ess {
 namespace {
 
-
 using nlohmann::ordered_json;
 
 ordered_json constraints_to_json(const Constraints& c) {

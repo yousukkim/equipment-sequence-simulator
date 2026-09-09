@@ -250,19 +250,21 @@ private:
                 continue;
             }
 
-            Step step{
-                .id = *id,
-                .resource_id = read_string(item, "resource_id", where, true).value_or(""),
-                .duration_ms = read_ms(item, "duration_ms", where, true).value_or(0),
-                .rate = read_number(item, "rate", where, true).value_or(0.0),
-                .depends_on = read_string_array(item, "depends_on", where),
-                .start_ms = read_ms(item, "start_ms", where, false),
-            };
-            if (step.duration_ms == 0 && member(item, "duration_ms") != nullptr) {
+            // 길이는 따로 읽는다. read_ms가 이미 오류를 냈다면 같은 필드에 오류를 겹쳐 내지 않는다.
+            const auto duration = read_ms(item, "duration_ms", where, true);
+            if (duration.has_value() && *duration == 0) {
                 add_error(where + "/duration_ms",
                           "1 이상이어야 합니다. 길이가 0인 동작은 다루지 않습니다.");
             }
-            scenario_.steps.push_back(std::move(step));
+
+            scenario_.steps.push_back(Step{
+                .id = *id,
+                .resource_id = read_string(item, "resource_id", where, true).value_or(""),
+                .duration_ms = duration.value_or(0),
+                .rate = read_number(item, "rate", where, true).value_or(0.0),
+                .depends_on = read_string_array(item, "depends_on", where),
+                .start_ms = read_ms(item, "start_ms", where, false),
+            });
         }
     }
 

@@ -13,11 +13,6 @@ namespace {
 using ess::Ms;
 using ess::ViolationCode;
 
-bool has_code(const std::vector<ess::Violation>& violations, ViolationCode code) {
-    return std::any_of(violations.begin(), violations.end(),
-                       [&](const ess::Violation& v) { return v.code == code; });
-}
-
 std::size_t count_code(const std::vector<ess::Violation>& violations, ViolationCode code) {
     return static_cast<std::size_t>(std::count_if(
         violations.begin(), violations.end(), [&](const ess::Violation& v) { return v.code == code; }));

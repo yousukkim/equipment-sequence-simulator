@@ -271,6 +271,66 @@ TEST_CASE("예제 시나리오를 스케줄하면 검증을 통과한다") {
     CHECK(makespan(result.scenario) > 0);
 }
 
+TEST_CASE("알 수 없는 자원을 가리키면 성공으로 보고하지 않는다") {
+    // 참조 무결성은 로더의 책임이지만, 로더를 거치지 않고 직접 부르는 경로가 있다.
+    // 조용히 건너뛰면 시각이 비어 있는 동작을 남긴 채 ok()가 참이 되어 버린다.
+    const ess::Scenario scenario{
+        .name = "사전 조건",
+        .resources = {ess::Resource{.id = "r"}},
+        .steps =
+            {
+                ess::Step{.id = "a", .resource_id = "r", .duration_ms = 100},
+                ess::Step{.id = "b", .resource_id = "없는자원", .duration_ms = 100},
+            },
+    };
+    const ess::ScheduleResult result = ess::schedule(scenario);
+    CHECK_FALSE(result.ok());
+    CHECK(result.failures.empty());            // 제약 문제가 아니라
+    CHECK(result.input_errors.size() == 1);    // 입력 문제로 보고한다
+    CHECK(result.input_errors[0].find("없는자원") != std::string::npos);
+}
+
+TEST_CASE("성공했다면 모든 동작에 시각이 채워져 있다") {
+    const ess::Scenario scenario{
+        .name = "완전성",
+        .resources = {ess::Resource{.id = "r1"}, ess::Resource{.id = "r2"}},
+        .steps =
+            {
+                ess::Step{.id = "a", .resource_id = "r1", .duration_ms = 100},
+                ess::Step{.id = "b", .resource_id = "r2", .duration_ms = 100, .depends_on = {"a"}},
+                ess::Step{.id = "c", .resource_id = "r1", .duration_ms = 100},
+            },
+    };
+    const ess::ScheduleResult result = ess::schedule(scenario);
+    REQUIRE(result.ok());
+    // ok()가 참이면 배치가 빠진 동작이 없어야 한다. CLI가 이 값을 그대로 역참조한다.
+    CHECK(ess::ScheduleView::unplaced_steps(result.scenario).empty());
+}
+
+TEST_CASE("ScheduleView를 복사해도 조회가 안전하다") {
+    const ess::Scenario scenario{
+        .name = "복사",
+        .resources = {ess::Resource{.id = "r"}},
+        .steps =
+            {
+                ess::Step{.id = "a", .resource_id = "r", .duration_ms = 100, .start_ms = 0},
+                ess::Step{.id = "b", .resource_id = "r", .duration_ms = 100, .start_ms = 200},
+            },
+    };
+
+    ess::ScheduleView copy{scenario};
+    {
+        // 원본은 이 블록이 끝나면 사라진다. 내부 색인이 원본을 가리키고 있었다면 여기서 깨진다.
+        const ess::ScheduleView original{scenario};
+        copy = original;
+    }
+    const ess::PlacedStep* placed = copy.placement_of("b");
+    REQUIRE(placed != nullptr);
+    CHECK(placed->step->id == "b");
+    CHECK(placed->when.start == 200);
+    CHECK(copy.placed().size() == 2);
+}
+
 TEST_CASE("배치 결과를 JSON으로 쓰고 다시 읽어도 검증을 통과한다") {
     const ess::Scenario scenario{
         .name = "왕복 직렬화",

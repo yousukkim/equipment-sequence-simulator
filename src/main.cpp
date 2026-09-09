@@ -118,6 +118,13 @@ int run_schedule(std::string_view path, std::string_view out_path) {
     std::cout << std::format("시나리오: {} (자원 {}, 동작 {})\n", title, input.resources.size(),
                              input.steps.size());
 
+    if (!scheduled.input_errors.empty()) {
+        std::cerr << std::format("\n입력 오류 {}건\n", scheduled.input_errors.size());
+        for (const std::string& message : scheduled.input_errors) {
+            std::cerr << "  " << message << '\n';
+        }
+        return kInputError;
+    }
     if (!scheduled.ok()) {
         std::cout << std::format("\n스케줄 불가 {}건\n\n", scheduled.failures.size());
         print_violations(scheduled.failures);
