@@ -1,5 +1,7 @@
 # 장비 동작 시퀀스 시뮬레이터
 
+[![CI](https://github.com/yousukkim/equipment-sequence-simulator/actions/workflows/ci.yml/badge.svg)](https://github.com/yousukkim/equipment-sequence-simulator/actions/workflows/ci.yml)
+
 여러 하드웨어 자원의 물리적 제약을 입력받아, 동작 시퀀스가 제약을 위반하는지 **검증**하고,
 위반이 없도록 실행 시각을 **배치**하며, 결과 **타임라인을 출력**하는 C++20 도구입니다.
 
@@ -273,7 +275,8 @@ third_party/  단일 헤더 의존성 (nlohmann/json, doctest)
 ## 빌드 환경
 
 - CMake 3.20 이상, C++20 컴파일러
-- 개발·검증 환경: MSVC 19.41 (Visual Studio 2022) / Windows
 - 외부 의존성 없음 — 단일 헤더 라이브러리를 저장소에 동봉
 
-`std::format`을 사용합니다. 다른 컴파일러로 옮길 때는 `<format>` 지원 여부를 확인해야 합니다.
+`std::format`을 사용하므로 `<format>`을 지원하는 컴파일러가 필요합니다.
+push할 때마다 **Windows / MSVC**와 **Ubuntu / GCC** 두 환경에서 빌드·테스트가 자동으로 돌아갑니다.
+단위 테스트뿐 아니라 예제 시나리오를 실제로 실행해 CLI 종료 코드까지 확인합니다.

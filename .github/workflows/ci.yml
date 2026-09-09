@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      # 한쪽이 실패해도 다른 쪽 결과를 끝까지 본다. 어느 컴파일러 문제인지 알아야 한다.
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows / MSVC
+            os: windows-latest
+          - name: Ubuntu / GCC
+            os: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 컴파일러 확인
+        shell: bash
+        run: cmake --version
+
+      # 외부 의존성은 저장소에 동봉되어 있으므로 받아올 것이 없다.
+      # 클론 직후 바로 빌드되는지가 여기서 실제로 검증된다.
+      - name: 구성
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: 빌드
+        run: cmake --build build --config Release
+
+      - name: 테스트
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      # 단위 테스트와 별개로, CLI가 문서에 적힌 종료 코드를 실제로 내는지 확인한다.
+      - name: 예제 시나리오와 종료 코드 확인
+        shell: bash
+        run: |
+          set -e
+          if [ -x build/Release/ess.exe ]; then
+            BIN=build/Release/ess.exe
+          elif [ -x build/ess ]; then
+            BIN=build/ess
+          else
+            echo "실행 파일을 찾지 못했습니다."
+            find build -name "ess*" -type f
+            exit 1
+          fi
+          echo "실행 파일: $BIN"
+
+          echo "--- 제약을 지킨 시나리오는 종료 코드 0 ---"
+          "$BIN" validate scenarios/basic_scan.json
+
+          echo "--- 위반이 있는 시나리오는 종료 코드 1 ---"
+          if "$BIN" validate scenarios/duty_violation.json; then
+            echo "위반을 잡아내지 못했습니다."
+            exit 1
+          fi
+
+          echo "--- 배타 충돌 시나리오는 배치에 성공해야 한다 ---"
+          "$BIN" schedule scenarios/exclusive_conflict.json
