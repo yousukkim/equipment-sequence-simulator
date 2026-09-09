@@ -24,9 +24,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: 컴파일러 확인
+      # 어떤 컴파일러로 검증됐는지 로그에 남겨 둔다.
+      # <format> 같은 표준 라이브러리 지원 범위를 따질 때 근거가 된다.
+      - name: 도구 버전 기록
         shell: bash
-        run: cmake --version
+        run: |
+          cmake --version
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            g++ --version
+          else
+            cmake --system-information 2>/dev/null | grep -i "^CMAKE_CXX_COMPILER_VERSION" || true
+          fi
 
       # 외부 의존성은 저장소에 동봉되어 있으므로 받아올 것이 없다.
       # 클론 직후 바로 빌드되는지가 여기서 실제로 검증된다.
